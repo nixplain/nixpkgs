@@ -76,9 +76,52 @@ rec {
     # name of the resulting derivation
     # TODO(@Artturin): enable strictDeps always
     }: buildCommand:
+
+    # QUESTION
+    # What     is    the     point    of     concatenating
+    # `derivationArgs.passAsFile`  and then  `removeAttrs`
+    # it in the end? Isn't this redundant?
+    # 
+    # ANSWER
+    # Because simply merging  `derivationArgs` in the end,
+    # would  overwrite  `[  "buildCommand"  ]`  passed  in
+    # earlier:
+    # 
+    #     nix-repl> as = { a = [ 3 ]; r = 27; s = 9; } 
+    # 
+    #     nix-repl> ({ a = [ 1 2 ]; b = 3; } // as).a  
+    #     [ 3 ]
+    # 
+    #     nix-repl> ({ a = [ 1 2 ] ++ as.a; b = 3; } // as ).a                             
+    #     [ 3 ]
+    # 
+    #     nix-repl> ({ a = [ 1 2 ] ++ as.a; b = 3; } // builtins.removeAttrs as [ "a" ]).a
+    #     [ 1 2 3 ]
+    # 
+    # One could argue though that the following would have
+    # been simpler:
+    # 
+    #     stdenv.mkDerivation ({
+    #       enableParallelBuilding = true;
+    #       inherit buildCommand name;
+    #     }
+    #     // (lib.optionalAttrs runLocal {
+    #           preferLocalBuild = true;
+    #           allowSubstitutes = false;
+    #        })
+    #     // derivationArgs
+    #     // { passAsFile = [ "buildCommand" ] ++ (derivationArgs.passAsFile or []); }
+    #     );
+    # 
+    # Which is, in principle, the same as:
+    # 
+    #     nix-repl> ({  b = 3; } // as // { a = [ 1 2 ] ++ as.a; })   
+    #     { a = [ ... ]; b = 3; r = 27; s = 9; }
+
     stdenv.mkDerivation ({
       enableParallelBuilding = true;
       inherit buildCommand name;
+
       passAsFile = [ "buildCommand" ]
         ++ (derivationArgs.passAsFile or []);
     }
