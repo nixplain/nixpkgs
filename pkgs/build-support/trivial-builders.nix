@@ -117,6 +117,8 @@ rec {
    *   destination = "/bin/my-file";
    * }
    */
+
+   # https://discourse.nixos.org/t/writetextfile-how-does-the-meta-input-attribute-get-its-default-values-and-where-does-textpath-come-from/22588
   writeTextFile =
     { name # the name of the derivation
     , text
